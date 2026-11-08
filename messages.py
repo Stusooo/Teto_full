@@ -71,7 +71,9 @@ async def set_main_menu(bot_instance):
         BotCommand(command="sound", description="Цікавий наголос"),
         BotCommand(command="music", description="Музика"),
         BotCommand(command="word", description="Слово дня"),
-        BotCommand(command="feedback", description="Залишити відгук")
+        BotCommand(command="feedback", description="Залишити відгук"),
+        BotCommand(command="help", description="Допомога"),
+        BotCommand(command="city", description="Змінити місто для погоди")
     ]
 
     await bot_instance.set_my_commands(
@@ -378,6 +380,50 @@ async def feedback_command(message: types.Message):
 
     last_message_time[message.from_user.id] = datetime.now()
 
+# =================================================
+# Допомога
+# =================================================
+
+@dp.message(Command("help"))
+async def help_command(message: types.Message):
+    help_text = (
+        "📖 Допомога — команди Тето\n\n"
+        "/start — почати роботу з ботом\n"
+        "/weather — дізнатися погоду\n"
+        "/city — змінити місто для погоди\n"
+        "/future — отримати передбачення\n"
+        "/image — отримати картинку\n"
+        "/fact — цікавий історичний факт\n"
+        "/sound — перевірити наголос\n"
+        "/music — музика\n"
+        "/word — слово дня\n"
+        "/feedback — залишити відгук\n"
+        "/help — ця довідка"
+    )
+
+    await message.answer(help_text)
+
+# =================================================
+# Зміна міста
+# =================================================
+
+@dp.message(Command("city"))
+async def change_city_command(message: types.Message):
+    user_id = message.from_user.id
+
+    users_awaiting_city.add(user_id)
+
+    current_city = load_user_city(user_id)
+
+    if current_city:
+        await message.answer(
+            f"🌍 Твоє поточне місто: {current_city}\n"
+            "Введи назву нового міста:"
+        )
+    else:
+        await message.answer(
+            "🌍 Введи назву міста, для якого показувати погоду:"
+        )
 
 # =================================================
 # Обробка звичайних текстових повідомлень
