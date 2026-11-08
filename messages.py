@@ -36,7 +36,8 @@ from functions import (
     get_gender_keyboard,
     get_weather,
     get_word_of_the_day,
-    get_chat_response
+    get_chat_response,
+    remember_exchange
 )
 
 from Teto_codes import WEATHER_API_KEY, channel_id
@@ -170,6 +171,11 @@ async def handle_weather(message: types.Message):
 
     if status == "ok":
         await message.answer(weather_info)
+        remember_exchange(
+        user_id,
+        "/weather",
+        weather_info
+    )
     elif status == "not_found":
         users_awaiting_city.add(user_id)
         await message.answer("Не вдалося знайти збережене місто. Напиши його назву ще раз.")
@@ -180,25 +186,29 @@ async def handle_weather(message: types.Message):
 # =================================================
 # /future — передбачення
 # =================================================
-
 @dp.message(Command("future"))
 async def future_command(message: types.Message):
     if not await _ensure_gender(message):
         return
+
+    user_id = message.from_user.id
+    prediction = random.choice(future_Teto)
+    response_text = f"🏹 Тето дивиться у майбутнє:\n{prediction}"
 
     async with ChatActionSender.typing(
         bot=bot,
         chat_id=message.chat.id
     ):
         await asyncio.sleep(1)
+        await message.answer(response_text)
 
-        await message.answer(
-            f"🏹 Тето дивиться у майбутнє:\n"
-            f"{random.choice(future_Teto)}"
-        )
+    remember_exchange(
+        user_id,
+        "Користувач попросив передбачення.",
+        response_text
+    )
 
-    last_message_time[message.from_user.id] = datetime.now()
-
+    last_message_time[user_id] = datetime.now()
 
 # =================================================
 # /image — картинка
@@ -208,6 +218,8 @@ async def future_command(message: types.Message):
 async def image_command(message: types.Message):
     if not await _ensure_gender(message):
         return
+
+    user_id = message.from_user.id
 
     try:
         image_path = random.choice(image_Teto)
@@ -220,11 +232,17 @@ async def image_command(message: types.Message):
             await asyncio.sleep(1)
             await message.answer_photo(photo)
 
+        remember_exchange(
+            user_id,
+            "Користувач попросив картинку.",
+            f"Тето надіслала картинку. Файл: {image_path}"
+        )
+
     except Exception as e:
         print(f"[-] Помилка відправки картинки: {e}")
         await message.answer(random.choice(ERROR_MESSAGES))
 
-    last_message_time[message.from_user.id] = datetime.now()
+    last_message_time[user_id] = datetime.now()
 
 
 # =================================================
@@ -236,18 +254,22 @@ async def fact_command(message: types.Message):
     if not await _ensure_gender(message):
         return
 
+    user_id = message.from_user.id
+    fact = random.choice(history_facts)
+    response_text = f"📝 Історичний факт:\n{fact}"
+
     async with ChatActionSender.typing(
         bot=bot,
         chat_id=message.chat.id
     ):
         await asyncio.sleep(1)
+        await message.answer(response_text)
 
-        await message.answer(
-            f"📝 Історичний факт:\n"
-            f"{random.choice(history_facts)}"
-        )
-
-    last_message_time[message.from_user.id] = datetime.now()
+    remember_exchange(
+        user_id,
+        "Користувач попросив історичний факт.",
+        response_text
+    )
 
 
 # =================================================
@@ -259,18 +281,22 @@ async def sound_command(message: types.Message):
     if not await _ensure_gender(message):
         return
 
+    user_id = message.from_user.id
+    sound_info = random.choice(sound)
+    response_text = f"💥 Правильний наголос:\n{sound_info}"
+
     async with ChatActionSender.typing(
         bot=bot,
         chat_id=message.chat.id
     ):
         await asyncio.sleep(1)
+        await message.answer(response_text)
 
-        await message.answer(
-            f"💥 Правильний наголос:\n"
-            f"{random.choice(sound)}"
-        )
-
-    last_message_time[message.from_user.id] = datetime.now()
+    remember_exchange(
+        user_id,
+        "Користувач попросив правильний наголос.",
+        response_text
+    )
 
 
 # =================================================
@@ -281,6 +307,8 @@ async def sound_command(message: types.Message):
 async def music_command(message: types.Message):
     if not await _ensure_gender(message):
         return
+
+    user_id = message.from_user.id
 
     try:
         music_path = random.choice(music_Teto)
@@ -295,12 +323,17 @@ async def music_command(message: types.Message):
             await asyncio.sleep(1)
             await message.answer_audio(audio)
 
+        remember_exchange(
+            user_id,
+            "Користувач попросив музику.",
+            f"Тето надіслала аудіофайл: {music_path}"
+        )
+
     except Exception as e:
         print(f"[-] Помилка відправки музики: {e}")
         await message.answer(random.choice(ERROR_MESSAGES))
 
-    last_message_time[message.from_user.id] = datetime.now()
-
+    last_message_time[user_id] = datetime.now()
 
 # =================================================
 # /word — слово дня
@@ -311,20 +344,22 @@ async def word_command(message: types.Message):
     if not await _ensure_gender(message):
         return
 
+    user_id = message.from_user.id
     word = get_word_of_the_day()
+    response_text = f"📖 Слово дня від Тето: '{word}'"
 
     async with ChatActionSender.typing(
         bot=bot,
         chat_id=message.chat.id
     ):
         await asyncio.sleep(1)
+        await message.answer(response_text)
 
-        await message.answer(
-            f"📖 Слово дня від Тето: '{word}'"
-        )
-
-    last_message_time[message.from_user.id] = datetime.now()
-
+    remember_exchange(
+        user_id,
+        "Користувач попросив слово дня.",
+        response_text
+    )
 
 # =================================================
 # /feedback — відгук
@@ -377,9 +412,12 @@ async def handle_all_messages(message: types.Message):
         save_user_city(user_id, city)
         users_awaiting_city.discard(user_id)
 
-        await message.answer(
-            f"📍 Місто {city} збережено!\n\n{weather_info}"
-        )
+        response_text = f"📍 Місто {city} збережено!\n\n{weather_info}"
+        await message.answer(response_text)
+        remember_exchange(
+            user_id,
+            f"Користувач вказав місто: {city}",
+            response_text)
         return
 
     if not await _ensure_gender(message):

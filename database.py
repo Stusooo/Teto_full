@@ -2,9 +2,15 @@
 # Пам'ять Тето
 # =============================================
 import sqlite3
+import os
 
-db_conn = sqlite3.connect("teto_memory.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "teto_memory.db")
+
+db_conn = sqlite3.connect(DB_PATH)
 db_cursor = db_conn.cursor()
+
+print(f"[DB] Підключено базу даних: {DB_PATH}")
 
 # Історія повідомлень
 db_cursor.execute("""
@@ -46,8 +52,17 @@ def save_message(user_id, role, content):
     )
     db_conn.commit()
 
+def save_exchange(user_id, user_content, model_content):
+    db_cursor.executemany(
+        "INSERT INTO chat_history (user_id, role, content) VALUES (?, ?, ?)",
+        [
+            (user_id, "user", user_content),
+            (user_id, "model", model_content)
+        ]
+    )
+    db_conn.commit()
 
-def load_history(user_id, limit=5):
+def load_history(user_id, limit=7):
     db_cursor.execute("""
         SELECT role, content FROM (
             SELECT role, content, id FROM chat_history

@@ -11,7 +11,7 @@ from google.api_core import exceptions
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from config import chat_sessions, safety_settings
-from database import load_history, load_user_gender
+from database import load_history, load_user_gender, save_exchange
 from Teto_codes import API_KEYS
 from Teto_list import ERROR_MESSAGES, SYSTEM_PROMPT, words_for_the_day
 
@@ -126,6 +126,19 @@ async def get_chat_response(user_id, text):
             break
 
     return None
+
+# =================================================
+# Збереження взаємодій у спільну історію Тето
+# =================================================
+
+def remember_exchange(user_id, user_content, model_content):
+    if not user_content or not model_content:
+        return
+
+    save_exchange(user_id, user_content, model_content)
+
+    # Оновлюємо сесію Gemini під час наступного повідомлення
+    chat_sessions.pop(user_id, None)
 
 
 # =================================================
