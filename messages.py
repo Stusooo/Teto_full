@@ -1,61 +1,23 @@
 # =====================================================================
 # Хендлери Тето
 # =====================================================================
-
 import asyncio
 import random
 import re
 from datetime import datetime
-
 from aiogram import types, F
 from aiogram.filters import CommandStart, Command
 from aiogram.utils.chat_action import ChatActionSender
-from aiogram.types import (
-    FSInputFile,
-    BotCommand,
-    BotCommandScopeDefault
-)
+from aiogram.types import (FSInputFile, BotCommand, BotCommandScopeDefault)
 from database import load_user_city, save_user_city
 users_awaiting_city = set()
 
-from config import (
-    bot,
-    dp,
-    user_gender,
-    user_awaiting_feedback,
-    last_message_time
-)
-
-from database import (
-    load_user_gender,
-    save_user_gender,
-    save_message
-)
-
-from functions import (
-    get_gender_keyboard,
-    get_weather,
-    get_word_of_the_day,
-    get_chat_response,
-    remember_exchange
-)
-
+from config import (bot, dp, user_gender, user_awaiting_feedback, last_message_time)
+from database import (load_user_gender, save_user_gender, save_message)
+from functions import (get_gender_keyboard, get_weather, get_word_of_the_day, get_chat_response, remember_exchange)
 from Teto_codes import WEATHER_API_KEY, channel_id
-
-from Teto_list import (
-    HELLO_TETO,
-    GENDER_SUCCESS_MESSAGES,
-    FEEDBACK_SUCCESS_MESSAGES,
-    ERROR_MESSAGES,
-    GENDER_REQUEST_MESSAGES,
-    FEEDBACK_REQUEST_MESSAGES,
-    future_Teto,
-    image_Teto,
-    history_facts,
-    music_Teto,
-    sound
-)
-
+from Teto_list import (HELLO_TETO, GENDER_SUCCESS_MESSAGES, FEEDBACK_SUCCESS_MESSAGES, ERROR_MESSAGES, GENDER_REQUEST_MESSAGES, 
+                       FEEDBACK_REQUEST_MESSAGES, future_Teto, image_Teto, history_facts, music_Teto, sound)
 
 # =================================================
 # Реєстрація команд у синьому меню Telegram
@@ -73,14 +35,13 @@ async def set_main_menu(bot_instance):
         BotCommand(command="word", description="Слово дня"),
         BotCommand(command="feedback", description="Залишити відгук"),
         BotCommand(command="help", description="Допомога"),
-        BotCommand(command="city", description="Змінити місто для погоди")
+        BotCommand(command="city", description="Змінити місто для погоди"),
+        BotCommand(command="about", description="Про Тето"),
     ]
 
     await bot_instance.set_my_commands(
         commands,
-        scope=BotCommandScopeDefault()
-    )
-
+        scope=BotCommandScopeDefault())
 
 # =================================================
 # Перевірка статі користувача
@@ -101,9 +62,7 @@ async def _ensure_gender(message: types.Message):
                 reply_markup=get_gender_keyboard()
             )
             return False
-
     return True
-
 
 # =================================================
 # Перша зустріч із Тето
@@ -113,24 +72,20 @@ async def _ensure_gender(message: types.Message):
 async def handle_start(message: types.Message):
     user_id = message.from_user.id
     current_time = datetime.now()
-
     gender_from_db = load_user_gender(user_id)
 
     if gender_from_db:
         user_gender[user_id] = gender_from_db
 
         await message.answer(
-            random.choice(HELLO_TETO)
-        )
+            random.choice(HELLO_TETO))
 
     else:
         await message.answer(
             random.choice(GENDER_REQUEST_MESSAGES),
-            reply_markup=get_gender_keyboard()
-        )
+            reply_markup=get_gender_keyboard())
 
     last_message_time[user_id] = current_time
-
 
 # =================================================
 # Вибір статі
@@ -140,23 +95,19 @@ async def handle_start(message: types.Message):
 async def set_gender(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     gender_chosen = callback.data.split("_")[1]
-
     user_gender[user_id] = gender_chosen
     save_user_gender(user_id, gender_chosen)
-
     await callback.message.delete()
-
     await callback.message.answer(
-        random.choice(GENDER_SUCCESS_MESSAGES)
-    )
+        random.choice(GENDER_SUCCESS_MESSAGES))
 
     last_message_time[user_id] = datetime.now()
     await callback.answer()
 
-
 # =================================================
 # /weather — погода
 # =================================================
+
 @dp.message(Command("weather"))
 async def handle_weather(message: types.Message):
     user_id = message.from_user.id
@@ -167,27 +118,21 @@ async def handle_weather(message: types.Message):
         await message.answer("🌍 У якому місті подивитися погоду?")
         return
 
-    status, weather_info = await asyncio.to_thread(
-        get_weather, city, WEATHER_API_KEY
-    )
+    status, weather_info = await asyncio.to_thread(get_weather, city, WEATHER_API_KEY)
 
     if status == "ok":
         await message.answer(weather_info)
-        remember_exchange(
-        user_id,
-        "/weather",
-        weather_info
-    )
+        remember_exchange(user_id, "/weather", weather_info)
     elif status == "not_found":
         users_awaiting_city.add(user_id)
         await message.answer("Не вдалося знайти збережене місто. Напиши його назву ще раз.")
     else:
         await message.answer(random.choice(ERROR_MESSAGES))
 
-
 # =================================================
 # /future — передбачення
 # =================================================
+
 @dp.message(Command("future"))
 async def future_command(message: types.Message):
     if not await _ensure_gender(message):
@@ -199,16 +144,11 @@ async def future_command(message: types.Message):
 
     async with ChatActionSender.typing(
         bot=bot,
-        chat_id=message.chat.id
-    ):
+        chat_id=message.chat.id):
         await asyncio.sleep(1)
         await message.answer(response_text)
 
-    remember_exchange(
-        user_id,
-        "Користувач попросив передбачення.",
-        response_text
-    )
+    remember_exchange(user_id, "Користувач попросив передбачення.", response_text)
 
     last_message_time[user_id] = datetime.now()
 
@@ -229,23 +169,17 @@ async def image_command(message: types.Message):
 
         async with ChatActionSender.upload_photo(
             bot=bot,
-            chat_id=message.chat.id
-        ):
+            chat_id=message.chat.id):
             await asyncio.sleep(1)
             await message.answer_photo(photo)
 
-        remember_exchange(
-            user_id,
-            "Користувач попросив картинку.",
-            f"Тето надіслала картинку. Файл: {image_path}"
-        )
+        remember_exchange(user_id, "Користувач попросив картинку.", f"Тето надіслала картинку. Файл: {image_path}")
 
     except Exception as e:
         print(f"[-] Помилка відправки картинки: {e}")
         await message.answer(random.choice(ERROR_MESSAGES))
 
     last_message_time[user_id] = datetime.now()
-
 
 # =================================================
 # /fact — історичний факт
@@ -262,17 +196,11 @@ async def fact_command(message: types.Message):
 
     async with ChatActionSender.typing(
         bot=bot,
-        chat_id=message.chat.id
-    ):
+        chat_id=message.chat.id):
         await asyncio.sleep(1)
         await message.answer(response_text)
 
-    remember_exchange(
-        user_id,
-        "Користувач попросив історичний факт.",
-        response_text
-    )
-
+    remember_exchange(user_id, "Користувач попросив історичний факт.", response_text)
 
 # =================================================
 # /sound — правильний наголос
@@ -289,17 +217,11 @@ async def sound_command(message: types.Message):
 
     async with ChatActionSender.typing(
         bot=bot,
-        chat_id=message.chat.id
-    ):
+        chat_id=message.chat.id):
         await asyncio.sleep(1)
         await message.answer(response_text)
 
-    remember_exchange(
-        user_id,
-        "Користувач попросив правильний наголос.",
-        response_text
-    )
-
+    remember_exchange(user_id, "Користувач попросив правильний наголос.", response_text)
 
 # =================================================
 # /music — музика
@@ -320,16 +242,11 @@ async def music_command(message: types.Message):
 
         async with ChatActionSender.upload_voice(
             bot=bot,
-            chat_id=message.chat.id
-        ):
+            chat_id=message.chat.id):
             await asyncio.sleep(1)
             await message.answer_audio(audio)
 
-        remember_exchange(
-            user_id,
-            "Користувач попросив музику.",
-            f"Тето надіслала аудіофайл: {music_path}"
-        )
+        remember_exchange(user_id, "Користувач попросив музику.", f"Тето надіслала аудіофайл: {music_path}")
 
     except Exception as e:
         print(f"[-] Помилка відправки музики: {e}")
@@ -350,18 +267,11 @@ async def word_command(message: types.Message):
     word = get_word_of_the_day()
     response_text = f"📖 Слово дня від Тето: '{word}'"
 
-    async with ChatActionSender.typing(
-        bot=bot,
-        chat_id=message.chat.id
-    ):
+    async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
         await asyncio.sleep(1)
         await message.answer(response_text)
 
-    remember_exchange(
-        user_id,
-        "Користувач попросив слово дня.",
-        response_text
-    )
+    remember_exchange(user_id, "Користувач попросив слово дня.", response_text)
 
 # =================================================
 # /feedback — відгук
@@ -373,57 +283,95 @@ async def feedback_command(message: types.Message):
         return
 
     user_awaiting_feedback[message.from_user.id] = True
-
-    await message.answer(
-        random.choice(FEEDBACK_REQUEST_MESSAGES)
-    )
+    await message.answer(random.choice(FEEDBACK_REQUEST_MESSAGES))
 
     last_message_time[message.from_user.id] = datetime.now()
 
 # =================================================
-# Допомога
+# /help - допомога
 # =================================================
 
 @dp.message(Command("help"))
 async def help_command(message: types.Message):
     help_text = (
-        "📖 Допомога — команди Тето\n\n"
+        "📖 Допомога — буття Тето\n\n"
         "/start — почати роботу з ботом\n"
-        "/weather — дізнатися погоду\n"
+        "/weather — дізнатися погоду(за вказаним містом)\n"
         "/city — змінити місто для погоди\n"
         "/future — отримати передбачення\n"
         "/image — отримати картинку\n"
-        "/fact — цікавий історичний факт\n"
-        "/sound — перевірити наголос\n"
-        "/music — музика\n"
+        "/fact — факт з історії України\n"
+        "/sound — наголос слова українською \n"
+        "/music — музика Тето\n"
         "/word — слово дня\n"
         "/feedback — залишити відгук\n"
+        "/about — опис роботи Тето\n"
         "/help — ця довідка"
     )
 
     await message.answer(help_text)
 
 # =================================================
-# Зміна міста
+# /about - опис Тето
+# =================================================
+
+@dp.message(Command("about"))
+async def help_command(message: types.Message):
+    about_text = (
+    "Тето — віртуальна співрозмовниця, створена для спілкування, "
+    "розваг та допомоги. Вона завжди рада новим знайомствам "
+    "і цікавим розмовам!(◕‿◕)\n\n"
+
+    "✨Що вона вміє?\n"
+    "Окрім функцій, доступних через меню, Тето також може "
+    "взаємодіяти з різними типами повідомлень:\n"
+    "🖼 Реагувати на фотографії;\n"
+    "🎞 Переглядати GIF-анімації;\n"
+    "🎭 Розпізнавати стікери;\n"
+    "🎤 Обробляти голосові повідомлення.\n\n"
+
+    "🌸 Трохи про характер\n"
+    "Тето теж має свій характер! Іноді вона може втомлюватися "
+    "або не впоратися з обробкою певного повідомлення. "
+    "Якщо вона не відповіла — спробуйте надіслати його ще раз "
+    "трохи пізніше.\n\n"
+    "А ще Тето іноді може сама розпочати розмову, "
+    "якщо Ви їй сподобаєтеся. Тож не дивуйтеся несподіваному "
+    "повідомленню! ♡\n\n"
+
+    "🔒 Конфіденційність\n"
+    "Інформація про Вашу стать та місто (необхідне для прогнозу "
+    "погоди) використовується для роботи відповідних функцій "
+    "і не призначена для публічного поширення.\n\n"
+
+    "💌 Зворотний зв'язок\n"
+    "Буду дуже вдячний за Ваші відгуки! Надсилайте пропозиції, "
+    "повідомлення про помилки, конструктивну критику та навіть "
+    "власні забаганки. Саме завдяки Вам Тето може ставати кращою!\n\n"
+
+    "━━━━━━━━━━━━━━\n"
+    "💗 Дякую, що користуєтеся Тето!\n\n"
+    "З любов'ю, автор ♡")
+
+    await message.answer(about_text)
+
+# =================================================
+# /city - зміна міста
 # =================================================
 
 @dp.message(Command("city"))
 async def change_city_command(message: types.Message):
     user_id = message.from_user.id
-
     users_awaiting_city.add(user_id)
-
     current_city = load_user_city(user_id)
 
     if current_city:
         await message.answer(
             f"🌍 Твоє поточне місто: {current_city}\n"
-            "Введи назву нового міста:"
-        )
+            "Введи назву нового міста:")
     else:
         await message.answer(
-            "🌍 Введи назву міста, для якого показувати погоду:"
-        )
+            "🌍 Введи назву міста, для якого показувати погоду:")
 
 # =================================================
 # Обробка звичайних текстових повідомлень
@@ -439,20 +387,16 @@ async def handle_all_messages(message: types.Message):
     if user_id in users_awaiting_city:
         city = message.text.strip()
 
-        status, weather_info = await asyncio.to_thread(
-            get_weather, city, WEATHER_API_KEY
-        )
+        status, weather_info = await asyncio.to_thread(get_weather, city, WEATHER_API_KEY)
 
         if status == "not_found":
             await message.answer(
-                "❌ Не знайшла такого міста. Спробуй ще раз."
-            )
+                "❌ Не знайшла такого міста. Спробуй ще раз.")
             return
 
         if status == "error":
             await message.answer(
-                random.choice(ERROR_MESSAGES)
-            )
+                random.choice(ERROR_MESSAGES))
             return
 
         save_user_city(user_id, city)
@@ -460,18 +404,15 @@ async def handle_all_messages(message: types.Message):
 
         response_text = f"📍 Місто {city} збережено!\n\n{weather_info}"
         await message.answer(response_text)
-        remember_exchange(
-            user_id,
-            f"Користувач вказав місто: {city}",
-            response_text)
+        remember_exchange(user_id, f"Користувач вказав місто: {city}", response_text)
         return
 
     if not await _ensure_gender(message):
         return
 
-    # -------------------------------------------------
-    # Отримання та відправка відгуку
-    # -------------------------------------------------
+# =================================================
+# Отримання та відправка відгуку
+# =================================================
 
     if user_awaiting_feedback.get(user_id) is True:
         user_name = message.from_user.full_name
@@ -479,49 +420,35 @@ async def handle_all_messages(message: types.Message):
         username = (
             f"@{message.from_user.username}"
             if message.from_user.username
-            else "немає ніка"
-        )
+            else "немає ніка")
 
         feedback_text = (
             f"📥 ---НОВИЙ ВІДГУК!---\n"
             f"Від: {user_name} ({username})\n"
             f"ID: {user_id}\n"
-            f"Текст: {message.text}"
-        )
+            f"Текст: {message.text}")
 
         try:
-            await bot.send_message(
-                channel_id,
-                feedback_text
-            )
+            await bot.send_message(channel_id, feedback_text)
 
         except Exception as e:
             print(f"[-] Помилка відправки в канал: {e}")
 
-            await message.answer(
-                random.choice(ERROR_MESSAGES)
-            )
+            await message.answer(random.choice(ERROR_MESSAGES))
             return
 
         user_awaiting_feedback[user_id] = False
-
-        await message.answer(
-            random.choice(FEEDBACK_SUCCESS_MESSAGES)
-        )
+        await message.answer(random.choice(FEEDBACK_SUCCESS_MESSAGES))
         return
 
-    # -------------------------------------------------
-    # Звичайне спілкування через Gemini
-    # -------------------------------------------------
+# =================================================
+# Звичайне спілкування через Gemini
+# =================================================
 
     async with ChatActionSender.typing(
         bot=bot,
-        chat_id=message.chat.id
-    ):
-        response = await get_chat_response(
-            user_id,
-            message.text
-        )
+        chat_id=message.chat.id):
+        response = await get_chat_response(user_id, message.text)
 
         if response:
             clean_text = re.sub(
@@ -532,15 +459,11 @@ async def handle_all_messages(message: types.Message):
 
             await asyncio.sleep(1.5)
             await message.answer(clean_text)
-
             save_message(user_id, "user", message.text)
             save_message(user_id, "model", response)
 
         else:
-            await message.answer(
-                random.choice(ERROR_MESSAGES)
-            )
-
+            await message.answer(random.choice(ERROR_MESSAGES))
 
 # =================================================
 # Невідомі команди
@@ -549,6 +472,6 @@ async def handle_all_messages(message: types.Message):
 @dp.message(F.text.startswith("/"))
 async def unknown_command(message: types.Message):
     await message.answer(
-        "Не знаю такої команди. "
-        "Скористайся меню Telegram, щоб переглянути доступні команди."
+        "Ой! Не знаю такої команди:( "
+        "Скористайся меню Telegram, щоб переглянути доступні команди (^^)"
     )

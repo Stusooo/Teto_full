@@ -6,10 +6,8 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "teto_memory.db")
-
 db_conn = sqlite3.connect(DB_PATH)
 db_cursor = db_conn.cursor()
-
 print(f"[DB] Підключено базу даних: {DB_PATH}")
 
 # Історія повідомлень
@@ -39,7 +37,6 @@ if "city" not in columns:
     db_cursor.execute("ALTER TABLE user_settings ADD COLUMN city TEXT")
 
 db_conn.commit()
-
 
 # =============================================
 # Історія повідомлень
@@ -76,7 +73,6 @@ def load_history(user_id, limit=7):
         for role, content in db_cursor.fetchall()
     ]
 
-
 # =============================================
 # Стать користувача
 # =============================================
@@ -88,9 +84,7 @@ def save_user_gender(user_id, gender):
         ON CONFLICT(user_id)
         DO UPDATE SET gender = excluded.gender
     """, (user_id, gender))
-
     db_conn.commit()
-
 
 def load_user_gender(user_id):
     db_cursor.execute(
@@ -100,7 +94,6 @@ def load_user_gender(user_id):
 
     result = db_cursor.fetchone()
     return result[0] if result else None
-
 
 # =============================================
 # Місто користувача
@@ -116,12 +109,10 @@ def save_user_city(user_id, city):
 
     db_conn.commit()
 
-
 def load_user_city(user_id):
     db_cursor.execute(
         "SELECT city FROM user_settings WHERE user_id = ?",
-        (user_id,)
-    )
-
+        (user_id,))
+    
     result = db_cursor.fetchone()
     return result[0] if result else None

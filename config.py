@@ -1,14 +1,11 @@
 # ==============================
-# Імпорти
+# Ініціалізація і вхід у Gemini
 # ==============================
 from aiogram import Bot, Dispatcher
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from Teto_codes import TELEGRAM_TOKEN, API_KEYS
 
-# ==============================
-# Ініціалізація і вхід у Gemini
-# ==============================
 # Спільні bot і dp використовуються в messages.py, media.py та main.py.
 bot = Bot(TELEGRAM_TOKEN)
 dp = Dispatcher()
@@ -20,7 +17,7 @@ safety_settings = {
     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
 }
-# gemini-2.5-flash - 25 запитів на день, тупі обмеження (ЗАРАЗ ВИКОРИСТОВУЄТЬСЯ)
+# gemini-2.5-flash - 25 запитів на день?, тупі обмеження (ЗАРАЗ ВИКОРИСТОВУЄТЬСЯ)
 
 # ========================================================
 # Словники - як пам'ять бота:

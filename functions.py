@@ -5,15 +5,13 @@
 import random
 import requests
 from datetime import datetime
-
 import google.generativeai as genai
 from google.api_core import exceptions
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
 from config import chat_sessions, safety_settings
 from database import load_history, load_user_gender, save_exchange
 from Teto_codes import API_KEYS
-from Teto_list import ERROR_MESSAGES, SYSTEM_PROMPT, words_for_the_day
+from Teto_list import SYSTEM_PROMPT, words_for_the_day
 
 
 # =================================================
@@ -36,9 +34,7 @@ class KeyProvider:
         self.current_index = (self.current_index + 1) % len(self.keys)
         return self.get_current_key()
 
-
 key_provider = KeyProvider(API_KEYS)
-
 
 # =================================================
 # Створення або отримання сесії Gemini
@@ -54,8 +50,7 @@ async def get_chat_session(user_id):
             g_text = "хлопець" if gender == "male" else "дівчина"
             dynamic_system_prompt += (
                 f"\nПам'ятай: твій співрозмовник — {g_text}. "
-                "Використовуй відповідні закінчення."
-            )
+                "Використовуй відповідні закінчення.")
 
         current_key = key_provider.get_current_key()
         genai.configure(api_key=current_key)
@@ -63,31 +58,22 @@ async def get_chat_session(user_id):
         current_model = genai.GenerativeModel(
             model_name="gemini-2.5-flash",
             safety_settings=safety_settings,
-            system_instruction=dynamic_system_prompt
-        )
+            system_instruction=dynamic_system_prompt)
 
         if not history_db:
             history_db = [
-                {
-                    "role": "user",
-                    "parts": [f"Ось твоя інструкція: {dynamic_system_prompt}"]
-                },
-                {
-                    "role": "model",
+                {"role": "user", "parts": [f"Ось твоя інструкція: {dynamic_system_prompt}"]},
+                {"role": "model",
                     "parts": [
                         "Привіт! *радісно підстрибую і махаю руками* "
                         "Ох, я так чекала на розмову! "
                         "Обіцяю бути найкращою подругою "
                         "і використовувати тільки круті текстові смайли! "
-                        "(◕‿◕)♡ Що у тебе нового? Розповідай швидше!"
-                    ]
-                }
-            ]
-
+                        "(◕‿◕)♡ Що у тебе нового? Розповідай швидше!"]}
+                ]
         chat_sessions[user_id] = current_model.start_chat(history=history_db)
 
     return chat_sessions[user_id]
-
 
 # =================================================
 # Головний запит до Gemini
@@ -104,19 +90,13 @@ async def get_chat_response(user_id, text):
         try:
             genai.configure(api_key=key)
             chat = await get_chat_session(user_id)
-
             response = await chat.send_message_async(text)
             return response.text
 
         except (
             exceptions.ResourceExhausted,
-            exceptions.InternalServerError
-        ):
-            print(
-                f"[-] Ключ вичерпано або збій: "
-                f"{key[:10]}... Перемикаюсь."
-            )
-
+            exceptions.InternalServerError):
+            print( f"[-] Ключ вичерпано або збій: " f"{key[:10]}... Перемикаюсь.")
             key_provider.switch_to_next()
             chat_sessions.pop(user_id, None)
             continue
@@ -136,10 +116,7 @@ def remember_exchange(user_id, user_content, model_content):
         return
 
     save_exchange(user_id, user_content, model_content)
-
-    # Оновлюємо сесію Gemini під час наступного повідомлення
-    chat_sessions.pop(user_id, None)
-
+    chat_sessions.pop(user_id, None) # Оновлюємо сесію Gemini під час наступного повідомлення
 
 # =================================================
 # Клавіатура вибору статі
@@ -148,20 +125,8 @@ def remember_exchange(user_id, user_content, model_content):
 def get_gender_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Чоловік 🧍‍♂️",
-                    callback_data="gender_male"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="Жінка 🧍‍♀️",
-                    callback_data="gender_female"
-                )
-            ]
-        ]
-    )
+            [InlineKeyboardButton(text="Чоловік 🧍‍♂️", callback_data="gender_male")],
+            [InlineKeyboardButton(text="Жінка 🧍‍♀️", callback_data="gender_female")]])
 
 # =================================================
 # Функція погоди
@@ -169,18 +134,8 @@ def get_gender_keyboard():
 
 def get_weather(city, api_key):
     url = "https://api.openweathermap.org/data/2.5/weather"
-
     try:
-        response = requests.get(
-            url,
-            params={
-                "q": city,
-                "appid": api_key,
-                "units": "metric",
-                "lang": "ua"
-            },
-            timeout=10
-        )
+        response = requests.get(url, params={"q": city, "appid": api_key, "units": "metric", "lang": "ua"}, timeout=10)
 
         if response.status_code == 404:
             return "not_found", None
@@ -198,8 +153,7 @@ def get_weather(city, api_key):
             f"🌡 Температура: {temp}°C\n"
             f"💧 Вологість: {humidity}%\n"
             f"💨 Вітер: {wind_speed} м/с\n"
-            f"☁ Стан: {description}"
-        )
+            f"☁ Стан: {description}")
 
         return "ok", weather_info
 
@@ -221,7 +175,6 @@ def get_weather(city, api_key):
 
 def get_word_of_the_day():
     import config
-
     today = datetime.now().date()
 
     if config.last_word_of_the_day_date != today:

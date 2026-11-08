@@ -1,7 +1,6 @@
 # ==========================================================
 # Аналіз фото, анімацій, стікерів та голосових повідомлень
 # ==========================================================
-
 import asyncio
 import os
 import random
@@ -10,7 +9,6 @@ import cv2
 import whisper
 import io
 import tempfile
-
 from PIL import Image
 from aiogram import types, F
 from aiogram.utils.chat_action import ChatActionSender
@@ -19,15 +17,9 @@ from datetime import datetime
 from database import load_user_gender, save_message
 from functions import get_chat_session, get_gender_keyboard
 from Teto_codes import API_KEYS
-from Teto_list import (
-    GENDER_REQUEST_MESSAGES,
-    IMAGE_ERROR_MESSAGES,
-    ERROR_MESSAGES,
-    VOICE_ERROR_MESSAGES
-)
+from Teto_list import (GENDER_REQUEST_MESSAGES, IMAGE_ERROR_MESSAGES, ERROR_MESSAGES, VOICE_ERROR_MESSAGES)
 import google.generativeai as genai
 from rlottie_python import LottieAnimation
-
 
 # ==========================================================
 # Отримання першого кадру медіа
@@ -86,7 +78,6 @@ def get_first_frame(file_path, file_bytes, media_type):
     else:
         raise ValueError(f"Невідомий тип медіа: {media_type}")
 
-
 # ==========================================================
 # Аналіз фото
 # ==========================================================
@@ -104,8 +95,7 @@ async def handle_photo_message(message: types.Message):
             await bot.send_chat_action(message.chat.id, action="typing")
             await message.answer(
                 random.choice(GENDER_REQUEST_MESSAGES),
-                reply_markup=get_gender_keyboard()
-            )
+                reply_markup=get_gender_keyboard())
             return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
@@ -114,12 +104,7 @@ async def handle_photo_message(message: types.Message):
             file_info = await bot.get_file(photo.file_id)
             photo_buffer = await bot.download_file(file_info.file_path)
             image_data = photo_buffer.read()
-
-            image_part = {
-                "mime_type": "image/jpeg",
-                "data": image_data
-            }
-
+            image_part = {"mime_type": "image/jpeg", "data": image_data}
             user_text = message.caption if message.caption else "Подивись на це зображення"
 
             chat = await get_chat_session(user_id)
@@ -135,7 +120,6 @@ async def handle_photo_message(message: types.Message):
         except Exception as e:
             print(f"[-] Помилка аналізу фото: {e}")
             await message.answer(random.choice(IMAGE_ERROR_MESSAGES))
-
 
 # ==========================================================
 # Аналіз GIF та MP4
@@ -154,8 +138,7 @@ async def handle_animation(message: types.Message):
             await bot.send_chat_action(message.chat.id, action="typing")
             await message.answer(
                 random.choice(GENDER_REQUEST_MESSAGES),
-                reply_markup=get_gender_keyboard()
-            )
+                reply_markup=get_gender_keyboard())
             return
 
     async with ChatActionSender.typing(bot=bot, chat_id=message.chat.id):
@@ -165,22 +148,14 @@ async def handle_animation(message: types.Message):
             file_buffer = await bot.download_file(file_info.file_path)
             file_bytes = file_buffer.read()
 
-            media_type = (
-                "mp4"
+            media_type = ("mp4"
                 if file_info.file_path.lower().endswith(".mp4")
-                else "gif"
-            )
+                else "gif")
 
-            analysis_img = get_first_frame(
-                file_info.file_path,
-                file_bytes,
-                media_type
-            )
+            analysis_img = get_first_frame(file_info.file_path, file_bytes, media_type)
 
             # ЕТАП 1: АНАЛІЗ ПЕРШОГО КАДРУ
-
             image_description = None
-
             for key in API_KEYS:
                 try:
                     genai.configure(api_key=key)
@@ -188,9 +163,7 @@ async def handle_animation(message: types.Message):
 
                     raw_analysis = await model.generate_content_async(
                         ["Що на цій картинці? Опиши коротко.", analysis_img],
-                        safety_settings=safety_settings
-                    )
-
+                        safety_settings=safety_settings)
                     if raw_analysis.candidates and raw_analysis.candidates[0].finish_reason != 3:
                         image_description = raw_analysis.text
                         break
@@ -203,17 +176,13 @@ async def handle_animation(message: types.Message):
                 return
 
             # ЕТАП 2: РЕАКЦІЯ ТЕТО
-
             user_caption = message.caption if message.caption else "Подивись на це!"
-
             teto_request = (
                 f"Користувач надіслав анімацію з описом: '{user_caption}'. "
                 f"На першому кадрі анімації зображено: {image_description}. "
-                "Відреагуй на це як Касане Тето, будь емоційною!"
-            )
+                "Відреагуй на це як Касане Тето, будь емоційною!")
 
             final_response = None
-
             for key in API_KEYS:
                 try:
                     genai.configure(api_key=key)
@@ -227,12 +196,7 @@ async def handle_animation(message: types.Message):
             if final_response:
                 clean_text = re.sub(r'\*.*?\*', '', final_response.text).strip()
                 await message.answer(clean_text)
-
-                save_message(
-                    user_id,
-                    "user",
-                    f"[Анімація]: {user_caption}\nОпис першого кадру: {image_description}"
-                )
+                save_message(user_id, "user", f"[Анімація]: {user_caption}\nОпис першого кадру: {image_description}")
                 save_message(user_id, "model", final_response.text)
                 last_message_time[user_id] = datetime.now()
 
@@ -242,7 +206,6 @@ async def handle_animation(message: types.Message):
         except Exception as e:
             print(f"[-] Помилка в зчитуванні анімації: {e}")
             await message.answer(random.choice(ERROR_MESSAGES))
-
 
 # ==========================================================
 # Аналіз стікерів
@@ -286,13 +249,11 @@ async def handle_sticker(message: types.Message):
             analysis_img = get_first_frame(
                 file_info.file_path,
                 file_bytes,
-                media_type
-            )
+                media_type)
 
             # ЕТАП 1: АНАЛІЗ СТІКЕРА
 
             image_description = None
-
             for key in API_KEYS:
                 try:
                     genai.configure(api_key=key)
@@ -300,8 +261,7 @@ async def handle_sticker(message: types.Message):
 
                     response = await model.generate_content_async(
                         ["Опиши коротко, що зображено на цьому стікері.", analysis_img],
-                        safety_settings=safety_settings
-                    )
+                        safety_settings=safety_settings)
 
                     if response.candidates and response.candidates[0].finish_reason != 3:
                         image_description = response.text
@@ -315,17 +275,13 @@ async def handle_sticker(message: types.Message):
                 return
 
             # ЕТАП 2: РЕАКЦІЯ ТЕТО
-
             chat = await get_chat_session(user_id)
-
             teto_request = (
                 f"Користувач надіслав стікер. "
                 f"На першому кадрі зображено: {image_description}. "
-                "Відреагуй на нього як Касане Тето, будь емоційною!"
-            )
+                "Відреагуй на нього як Касане Тето, будь емоційною!")
 
             final_response = await chat.send_message_async(teto_request)
-
             clean_text = re.sub(r'\*.*?\*', '', final_response.text).strip()
             await message.answer(clean_text)
 
@@ -337,7 +293,6 @@ async def handle_sticker(message: types.Message):
             print(f"[-] Помилка аналізу стікера: {e}")
             await message.answer(random.choice(IMAGE_ERROR_MESSAGES))
 
-
 # ==========================================================
 # Зчитування голосових повідомлень
 # ==========================================================
@@ -347,33 +302,23 @@ async def get_teto_response(user_id, text):
     response = await asyncio.to_thread(chat.send_message, text)
     return response.text
 
-
 model_w = whisper.load_model("base")
-
 
 @dp.message(F.voice)
 async def handle_voice_message(message: types.Message):
     user_id = message.from_user.id
-
     await bot.send_chat_action(message.chat.id, action="typing")
     voice_file_path = f"voice_{user_id}.ogg"
 
     try:
         # ЗАВАНТАЖЕННЯ
-
         file_id = message.voice.file_id
         file = await bot.get_file(file_id)
         await bot.download_file(file.file_path, voice_file_path)
 
         # РОЗПІЗНАВАННЯ
-
         loop = asyncio.get_running_loop()
-
-        result = await loop.run_in_executor(
-            None,
-            lambda: model_w.transcribe(voice_file_path, fp16=False)
-        )
-
+        result = await loop.run_in_executor(None, lambda: model_w.transcribe(voice_file_path, fp16=False))
         recognized_text = result["text"]
 
         if not recognized_text.strip():
@@ -382,9 +327,7 @@ async def handle_voice_message(message: types.Message):
             return
 
         # ОТРИМАННЯ ВІДПОВІДІ GEMINI
-
         teto_answer = await get_teto_response(user_id, recognized_text)
-
         await bot.send_chat_action(message.chat.id, action="typing")
         await message.answer(teto_answer)
 
