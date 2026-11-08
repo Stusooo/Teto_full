@@ -7,7 +7,7 @@ from config import bot, dp
 
 # Імпорт модулів реєструє їхні @dp.message та @dp.callback_query хендлери.
 # Порядок: спочатку текстові/кнопкові хендлери, потім медіа-хендлери.
-import messages
+from messages import set_main_menu
 import media
 
 # Фонові функції підключаються з background.py.
@@ -15,6 +15,7 @@ from background import random_gif_sender, random_message_sender
 
 async def main():
     print("Teto is alive...")
+    await set_main_menu(bot)
     asyncio.create_task(random_gif_sender())
     asyncio.create_task(random_message_sender())
     await dp.start_polling(bot)
